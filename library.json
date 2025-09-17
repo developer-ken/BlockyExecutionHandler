@@ -1,0 +1,10 @@
+{
+    "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
+    "name": "BlockyExecutionHandler",
+    "version": "1.0.0",
+    "description": "A library for handling execution of Blocky code on microcontroller.",
+    "dependencies": {
+        "bblanchon/ArduinoJson": "^7.4.2",
+        "bblanchon/ArduinoStreamUtils": "^1.9.0"
+    }
+}
