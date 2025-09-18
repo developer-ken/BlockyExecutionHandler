@@ -11,21 +11,21 @@ bool __DEFAULT_BLOCKLY_HANDLERS_LOOPBREAK = false;
  *
  * 请注意，对于一个操作(Action)Block，返回false将阻止连接在它下方的块继续执行。
  */
-int _A_IF(JsonObject jb, BlocklyInterpreter b)
+int _A_IF(JsonObject jb, BlocklyInterpreter *b)
 {
     bool hit = false;
     for (int i = 0; jb["inputs"].containsKey("IF" + String(i)); i++)
     {
-        if (b.eval(jb["inputs"]["IF" + String(i)]))
+        if (b->eval(jb["inputs"]["IF" + String(i)]))
         {
             hit = true;
             if (jb["inputs"].containsKey("DO" + String(i)))
-                return b.exec(jb["inputs"]["DO" + String(i)]);
+                return b->exec(jb["inputs"]["DO" + String(i)]);
             break;
         }
     }
     if (!hit && jb["inputs"].containsKey("ELSE"))
-        return b.exec(jb["inputs"]["ELSE"]);
+        return b->exec(jb["inputs"]["ELSE"]);
     return true;
 }
 
@@ -35,47 +35,47 @@ int _A_IF(JsonObject jb, BlocklyInterpreter b)
  *
  * 这是一个求值(Value)Block，其返回值被传到上一级Block。
  */
-int _V_COMPARE(JsonObject jb, BlocklyInterpreter b)
+int _V_COMPARE(JsonObject jb, BlocklyInterpreter *b)
 {
     if (!jb.containsKey("inputs"))
     {
-        if (b.error(jb["id"], "No input found."))
+        if (b->error(jb["id"], "No input found."))
             return false;
     }
     if (!jb["inputs"].containsKey("A"))
     {
-        if (b.error(jb["id"], "Input field A not found."))
+        if (b->error(jb["id"], "Input field A not found."))
             return false;
     }
     if (!jb["inputs"].containsKey("B"))
     {
-        if (b.error(jb["id"], "Input field B not found."))
+        if (b->error(jb["id"], "Input field B not found."))
             return false;
     }
-    char *op = jb["fields"]["OP"].as<char *>();
+    const char *op = jb["fields"]["OP"].as<const char *>();
     if (String("EQ").equals(op))
     {
-        return b.eval(jb["inputs"]["A"]) == b.eval(jb["inputs"]["B"]);
+        return b->eval(jb["inputs"]["A"]) == b->eval(jb["inputs"]["B"]);
     }
     if (String("NEQ").equals(op))
     {
-        return b.eval(jb["inputs"]["A"]) != b.eval(jb["inputs"]["B"]);
+        return b->eval(jb["inputs"]["A"]) != b->eval(jb["inputs"]["B"]);
     }
     if (String("LT").equals(op))
     {
-        return b.eval(jb["inputs"]["A"]) < b.eval(jb["inputs"]["B"]);
+        return b->eval(jb["inputs"]["A"]) < b->eval(jb["inputs"]["B"]);
     }
     if (String("LTE").equals(op))
     {
-        return b.eval(jb["inputs"]["A"]) <= b.eval(jb["inputs"]["B"]);
+        return b->eval(jb["inputs"]["A"]) <= b->eval(jb["inputs"]["B"]);
     }
     if (String("GT").equals(op))
     {
-        return b.eval(jb["inputs"]["A"]) > b.eval(jb["inputs"]["B"]);
+        return b->eval(jb["inputs"]["A"]) > b->eval(jb["inputs"]["B"]);
     }
     if (String("GTE").equals(op))
     {
-        return b.eval(jb["inputs"]["A"]) >= b.eval(jb["inputs"]["B"]);
+        return b->eval(jb["inputs"]["A"]) >= b->eval(jb["inputs"]["B"]);
     }
     return false;
 }
@@ -84,7 +84,7 @@ int _V_COMPARE(JsonObject jb, BlocklyInterpreter b)
  * math_number
  * 数值常量块
  */
-int _V_CONST_NUMBER(JsonObject jb, BlocklyInterpreter b)
+int _V_CONST_NUMBER(JsonObject jb, BlocklyInterpreter *b)
 {
     return jb["fields"]["NUM"].as<int>();
 }
@@ -93,43 +93,43 @@ int _V_CONST_NUMBER(JsonObject jb, BlocklyInterpreter b)
  * math_arithmetic
  * 基础计算块
  */
-int _V_ARITHMETIC(JsonObject jb, BlocklyInterpreter b)
+int _V_ARITHMETIC(JsonObject jb, BlocklyInterpreter *b)
 {
     if (!jb.containsKey("inputs"))
     {
-        if (b.error(jb["id"], "No input found."))
+        if (b->error(jb["id"], "No input found."))
             return false;
     }
     if (!jb["inputs"].containsKey("A"))
     {
-        if (b.error(jb["id"], "Input field A not found."))
+        if (b->error(jb["id"], "Input field A not found."))
             return false;
     }
     if (!jb["inputs"].containsKey("B"))
     {
-        if (b.error(jb["id"], "Input field B not found."))
+        if (b->error(jb["id"], "Input field B not found."))
             return false;
     }
-    char *op = jb["fields"]["OP"].as<char *>();
+    const char *op = jb["fields"]["OP"].as<const char *>();
     if (String("ADD").equals(op))
     {
-        return b.eval(jb["inputs"]["A"]) + b.eval(jb["inputs"]["B"]);
+        return b->eval(jb["inputs"]["A"]) + b->eval(jb["inputs"]["B"]);
     }
     if (String("MINUS").equals(op))
     {
-        return b.eval(jb["inputs"]["A"]) - b.eval(jb["inputs"]["B"]);
+        return b->eval(jb["inputs"]["A"]) - b->eval(jb["inputs"]["B"]);
     }
     if (String("MULTIPLY").equals(op))
     {
-        return b.eval(jb["inputs"]["A"]) * b.eval(jb["inputs"]["B"]);
+        return b->eval(jb["inputs"]["A"]) * b->eval(jb["inputs"]["B"]);
     }
     if (String("DIVIDE").equals(op))
     {
-        return b.eval(jb["inputs"]["A"]) / b.eval(jb["inputs"]["B"]);
+        return b->eval(jb["inputs"]["A"]) / b->eval(jb["inputs"]["B"]);
     }
     if (String("POWER").equals(op))
     {
-        return pow(b.eval(jb["inputs"]["A"]), b.eval(jb["inputs"]["B"]));
+        return pow(b->eval(jb["inputs"]["A"]), b->eval(jb["inputs"]["B"]));
     }
     return false;
 }
@@ -138,26 +138,26 @@ int _V_ARITHMETIC(JsonObject jb, BlocklyInterpreter b)
  * controls_whileUntil
  * 条件循环块
  */
-int _A_WHILELOOP(JsonObject jb, BlocklyInterpreter b)
+int _A_WHILELOOP(JsonObject jb, BlocklyInterpreter *b)
 {
     __DEFAULT_BLOCKLY_HANDLERS_LOOPBREAK = false;
     if (!jb.containsKey("inputs"))
     {
-        if (b.error(jb["id"], "No input found."))
+        if (b->error(jb["id"], "No input found."))
             return false;
     }
     if (!jb["inputs"].containsKey("MODE"))
     {
-        if (b.error(jb["id"], "Input field MODE not found."))
+        if (b->error(jb["id"], "Input field MODE not found."))
             return false;
     }
-    char *op = jb["fields"]["MODE"].as<char *>();
+    const char *op = jb["fields"]["MODE"].as<const char *>();
     bool retval = true;
     if (String("WHILE").equals(op))
     {
-        while (b.eval(jb["inputs"]["BOOL"]))
+        while (b->eval(jb["inputs"]["BOOL"]))
         {
-            if (!b.exec(jb["inputs"]["DO"]))
+            if (!b->exec(jb["inputs"]["DO"]))
             {
                 if (__DEFAULT_BLOCKLY_HANDLERS_LOOPBREAK)
                 {
@@ -171,7 +171,7 @@ int _A_WHILELOOP(JsonObject jb, BlocklyInterpreter b)
     {
         do
         {
-            if (!b.exec(jb["inputs"]["DO"]))
+            if (!b->exec(jb["inputs"]["DO"]))
             {
                 if (__DEFAULT_BLOCKLY_HANDLERS_LOOPBREAK)
                 {
@@ -179,7 +179,7 @@ int _A_WHILELOOP(JsonObject jb, BlocklyInterpreter b)
                     break;
                 }
             }
-        } while (!b.eval(jb["inputs"]["BOOL"]));
+        } while (!b->eval(jb["inputs"]["BOOL"]));
     }
     return true;
 }
@@ -188,13 +188,13 @@ int _A_WHILELOOP(JsonObject jb, BlocklyInterpreter b)
  * controls_repeat_ext
  * 计次循环
  */
-int _A_COUNTED_LOOP(JsonObject jb, BlocklyInterpreter b)
+int _A_COUNTED_LOOP(JsonObject jb, BlocklyInterpreter *b)
 {
-    int count = b.eval(jb["inputs"]["TIMES"]);
+    int count = b->eval(jb["inputs"]["TIMES"]);
     __DEFAULT_BLOCKLY_HANDLERS_LOOPBREAK = false;
     for (int i = 0; i < count; i++)
     {
-        if (!b.exec(jb["inputs"]["DO"]))
+        if (!b->exec(jb["inputs"]["DO"]))
         {
             if (__DEFAULT_BLOCKLY_HANDLERS_LOOPBREAK)
             {
@@ -213,9 +213,9 @@ int _A_COUNTED_LOOP(JsonObject jb, BlocklyInterpreter b)
  * 此块在循环中执行时，其导致循环break或continue.
  * 此块在循环外执行时，其导致程序立即结束.
  */
-int _A_BREAK_CONTINUE(JsonObject jb, BlocklyInterpreter b)
+int _A_BREAK_CONTINUE(JsonObject jb, BlocklyInterpreter *b)
 {
-    char *op = jb["fields"]["FLOW"].as<char *>();
+    const char *op = jb["fields"]["FLOW"].as<const char *>();
     if (String("BREAK").equals(op))
     {
         __DEFAULT_BLOCKLY_HANDLERS_LOOPBREAK = true;

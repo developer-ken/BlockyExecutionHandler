@@ -6,6 +6,8 @@
 
 BlocklyInterpreter::BlocklyInterpreter()
 {
+    runningEntrances = 0;
+    _flag_stop = false;
 }
 
 BlocklyInterpreter::~BlocklyInterpreter()
@@ -16,6 +18,11 @@ BlocklyInterpreter::~BlocklyInterpreter()
 /// 当一个Block的处理函数返回false时立即停止执行并返回false。
 int BlocklyInterpreter::exec(JsonObject json)
 {
+    if (_flag_stop)
+    {
+        log_w("Exec stopped by _flag_stop. return false.");
+        return false;
+    }
     if (json.isNull())
     {
         error("NULL", "Exec hit a null block.");
@@ -66,6 +73,11 @@ int BlocklyInterpreter::exec(JsonObject json)
 /// 注意：此函数不会执行连接在传入Block下方的其它Block。
 int BlocklyInterpreter::eval(JsonObject json)
 {
+    if (_flag_stop)
+    {
+        log_w("Eval stopped by _flag_stop. return false.");
+        return false;
+    }
     if (json.isNull())
     {
         error("NULL", "Eval hit a null block.");
@@ -118,7 +130,14 @@ int BlocklyInterpreter::triggerEntrance(String entrance)
 {
     if (_entrances.find(entrance) != _entrances.end())
     {
-        log_i("Entrance triggered: %s", entrance.c_str());
+        runningEntrances++;
+        int iid = runningEntrances;
+        log_i("Entrance %s triggered with iid %d", entrance.c_str(), iid);
+        int retval = exec(_entrances[entrance]);
+        log_i("Entrance %s ended with iid %d", entrance.c_str(), iid);
+        runningEntrances--;
+        log_i("There is currently %d entrances running.", runningEntrances);
+        return retval;
     }
     else
     {
@@ -130,6 +149,25 @@ int BlocklyInterpreter::triggerEntrance(String entrance)
 void BlocklyInterpreter::registerHandler(String type, iBlocklyNodeHandler handler)
 {
     _handlers.emplace(type, handler);
+}
+
+void BlocklyInterpreter::clearHandlers()
+{
+    _handlers.clear();
+}
+
+bool BlocklyInterpreter::isBusy()
+{
+    return runningEntrances > 0;
+}
+
+void BlocklyInterpreter::killAll()
+{
+    log_i("killAll set _flag_stop and waiting for all runningEntrances to stop.");
+    _flag_stop = true;
+    while (isBusy())
+        delay(1);
+    _flag_stop = false;
 }
 
 inline bool BlocklyInterpreter::error(String blockid, String msg)
