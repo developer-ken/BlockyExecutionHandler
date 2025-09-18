@@ -17,6 +17,7 @@ public:
     int execFile(String);
     int triggerEntrance(String);
     void registerHandler(String, iBlocklyNodeHandler);
+    bool error(String, String);
 
 private:
     std::map<String, iBlocklyNodeHandler> _handlers;

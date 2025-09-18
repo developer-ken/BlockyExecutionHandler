@@ -13,11 +13,18 @@ BlocklyInterpreter::~BlocklyInterpreter()
 }
 
 /// 传入一个Block，从该Block开始向后顺序执行。
-/// 当一个Block的处理函数返回false时立即停止执行并返回false。 
+/// 当一个Block的处理函数返回false时立即停止执行并返回false。
 int BlocklyInterpreter::exec(JsonObject json)
 {
+    if (json.isNull())
+    {
+        error("NULL", "Exec hit a null block.");
+        return false;
+    }
     if (json.containsKey("block"))
         json = json["block"]; // 兼容不同层级结构的Json
+    else if (json.containsKey("shadow"))
+        json = json["shadow"]; // 兼容shadow block
     if (json.containsKey("type"))
     {
         // 是单个block
@@ -26,9 +33,13 @@ int BlocklyInterpreter::exec(JsonObject json)
         // 顺序执行所有关联block
         do
         {
+            if (_handlers.find(json["type"]) == _handlers.end())
+            {
+                return error(json["id"], "Exec hit an undefined block.");
+            }
             // 当单个block要求跳出时停止执行其余的block并向上级汇报跳出
             if (!_handlers[json["type"]](current, this))
-                return 0;
+                return false;
             current = current["next"];
         } while (current.containsKey("next"));
     }
@@ -41,17 +52,38 @@ int BlocklyInterpreter::exec(JsonObject json)
             log_i("Registered entrance: %s", block["type"].as<const char *>());
             _entrances.emplace(block["type"], block);
         }
+        return true;
+    }
+    else
+    {
+        error("NULL", "Eval hit a invalid block.");
+        return false;
     }
     return 1;
 }
 
 /// 传入一个Block，执行它并获得它处理函数的返回值。
-/// 注意：此函数不会执行连接在传入Block下方的其它Block。 
+/// 注意：此函数不会执行连接在传入Block下方的其它Block。
 int BlocklyInterpreter::eval(JsonObject json)
 {
+    if (json.isNull())
+    {
+        error("NULL", "Eval hit a null block.");
+        return false;
+    }
+    if (json.containsKey("block"))
+        json = json["block"]; // 兼容不同层级结构的Json
+    else if (json.containsKey("shadow"))
+        json = json["shadow"]; // 兼容shadow block
     if (json.containsKey("type"))
     {
-        return _handlers[json["type"]](json, this);
+        if (_handlers.find(json["type"]) != _handlers.end())
+            return _handlers[json["type"]](json, this);
+        else
+        {
+            error(json["id"], "Eval hit an undefined block.");
+            return false;
+        }
     }
     else
     {
@@ -98,4 +130,11 @@ int BlocklyInterpreter::triggerEntrance(String entrance)
 void BlocklyInterpreter::registerHandler(String type, iBlocklyNodeHandler handler)
 {
     _handlers.emplace(type, handler);
+}
+
+inline bool BlocklyInterpreter::error(String blockid, String msg)
+{
+    log_e("Block interpreter failed at block %s:", blockid);
+    log_e("%s", msg);
+    return false;
 }
