@@ -14,19 +14,21 @@ public:
     ~BlocklyInterpreter();
     int exec(JsonObject);
     int eval(JsonObject);
-    int execFile(String);
-    int triggerEntrance(String);
-    void registerHandler(String, iBlocklyNodeHandler);
-    bool error(String, String);
+    int execFile(const char *);
+    int triggerEntrance(const char *);
+    void registerHandler(const char *, iBlocklyNodeHandler);
+    bool error(const char *, const char *);
     void clearHandlers();
     bool isBusy();
     void killAll();
     bool _flag_stop;
 
 private:
-    std::map<String, iBlocklyNodeHandler> _handlers;
-    std::map<String, JsonObject> _entrances;
+    std::map<uint32_t, iBlocklyNodeHandler> _handlers;
+    std::map<uint32_t, JsonObject> _entrances;
     int runningEntrances;
+    JsonArray EntranceBlocks;
+    uint32_t strHash(const char *);
 };
 
 #endif

@@ -223,6 +223,11 @@ int _A_BREAK_CONTINUE(JsonObject jb, BlocklyInterpreter *b)
     return false;
 }
 
+int _E_COMMON_NOP(JsonObject jb, BlocklyInterpreter *b)
+{
+    return true;
+}
+
 void RegisterDefaultHandlers(BlocklyInterpreter *bi)
 {
     bi->registerHandler("controls_if", _A_IF);

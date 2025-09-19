@@ -18,46 +18,87 @@ BlocklyInterpreter::~BlocklyInterpreter()
 /// 当一个Block的处理函数返回false时立即停止执行并返回false。
 int BlocklyInterpreter::exec(JsonObject json)
 {
+    log_i("exec(Xjson)");
     if (_flag_stop)
     {
         log_w("Exec stopped by _flag_stop. return false.");
         return false;
     }
+    log_i("no flagstop");
     if (json.isNull())
     {
         error("NULL", "Exec hit a null block.");
         return false;
     }
+    log_i("not null");
     if (json.containsKey("block"))
+    {
+        log_i("block - Go in");
         json = json["block"]; // 兼容不同层级结构的Json
+    }
     else if (json.containsKey("shadow"))
+    {
+        log_i("shadow - Go in");
         json = json["shadow"]; // 兼容shadow block
+    }
+    log_i("JsonStruct handled. Type check...");
     if (json.containsKey("type"))
     {
         // 是单个block
-        JsonObject current = json;
 
+        JsonObject current = json;
+        log_i("*Valid block*");
         // 顺序执行所有关联block
         do
         {
-            if (_handlers.find(json["type"]) == _handlers.end())
+            if (current.containsKey("block"))
             {
-                return error(json["id"], "Exec hit an undefined block.");
+                log_i("block - Go in");
+                current = current["block"]; // 兼容不同层级结构的Json
             }
+            else if (current.containsKey("shadow"))
+            {
+                log_i("shadow - Go in");
+                current = current["shadow"]; // 兼容shadow block
+            }
+            log_i("Digest block: %s", current["id"].as<const char *>());
+            uint32_t typehash = strHash(current["type"].as<const char *>());
+            if (_handlers.find(typehash) == _handlers.end())
+            {
+                log_e("Block %s(%d) is undefined.", current["type"].as<const char *>(), typehash);
+                return error(current["id"], "Exec hit an undefined block.");
+            }
+            log_i("Feed into executor");
             // 当单个block要求跳出时停止执行其余的block并向上级汇报跳出
-            if (!_handlers[json["type"]](current, this))
+            if (!_handlers[typehash](current, this))
+            {
+                log_i("Block request an abort.");
                 return false;
-            current = current["next"];
-        } while (current.containsKey("next"));
+            }
+            if (current.containsKey("next"))
+            {
+                current = current["next"];
+                log_i("-->Next block");
+            }
+            else
+            {
+                break;
+            }
+            taskYIELD();
+        } while (true);
+
+        log_i("Block sequence end");
     }
     else if (json.containsKey("blocks"))
     {
+        log_i("*Valid blockly entrance file*");
         // 是整个Blocky文件，将每个根block注册为入口
-        JsonArray blocks = json["blocks"]["blocks"].to<JsonArray>();
-        for (JsonObject block : blocks)
+        EntranceBlocks = json["blocks"]["blocks"];
+        log_i("%d enterances found", EntranceBlocks.size());
+        for (int ii = 0; ii < EntranceBlocks.size(); ii++)
         {
-            log_i("Registered entrance: %s", block["type"].as<const char *>());
-            _entrances.emplace(block["type"], block);
+            log_i("Registered entrance: %s", EntranceBlocks[ii]["type"].as<const char *>());
+            _entrances.emplace(strHash(EntranceBlocks[ii]["type"]), EntranceBlocks[ii]);
         }
         return true;
     }
@@ -89,8 +130,10 @@ int BlocklyInterpreter::eval(JsonObject json)
         json = json["shadow"]; // 兼容shadow block
     if (json.containsKey("type"))
     {
-        if (_handlers.find(json["type"]) != _handlers.end())
-            return _handlers[json["type"]](json, this);
+        uint32_t typehash = strHash(json["type"]);
+        log_i("eval_%s_%d(%s)", json["type"].as<const char *>(), typehash, json["id"].as<const char *>());
+        if (_handlers.find(typehash) != _handlers.end())
+            return _handlers[typehash](json, this);
         else
         {
             error(json["id"], "Eval hit an undefined block.");
@@ -103,56 +146,64 @@ int BlocklyInterpreter::eval(JsonObject json)
     }
 }
 
-int BlocklyInterpreter::execFile(String filename)
+int BlocklyInterpreter::execFile(const char *filename)
 {
-    File file = SD.open(filename, FILE_READ);
+
+    log_i("call execFile(%s)", filename);
+    File file = SD.open(filename);
+    log_i("fopen FI");
     if (file)
     {
         ReadBufferingStream bufferedFile{file, 64};
         JsonDocument _json;
+        log_i("start deserilize...");
         DeserializationError error = deserializeJson(_json, bufferedFile);
+        file.close();
         if (error)
         {
             log_e("deserializeJson() failed: %s", error.c_str());
             return -1;
         }
         return exec(_json.as<JsonObject>());
-        file.close();
     }
     else
     {
-        log_e("Failed to open file: %s", filename.c_str());
+        log_e("Failed to open file: %s", filename);
         return -1;
     }
 }
 
-int BlocklyInterpreter::triggerEntrance(String entrance)
+int BlocklyInterpreter::triggerEntrance(const char *entrance)
 {
-    if (_entrances.find(entrance) != _entrances.end())
+    uint32_t strhashkey = strHash(entrance);
+    if (_entrances.find(strhashkey) != _entrances.end())
     {
         runningEntrances++;
         int iid = runningEntrances;
-        log_i("Entrance %s triggered with iid %d", entrance.c_str(), iid);
-        int retval = exec(_entrances[entrance]);
-        log_i("Entrance %s ended with iid %d", entrance.c_str(), iid);
+        log_i("Entrance %s triggered with iid %d", entrance, iid);
+        int retval = exec(_entrances[strhashkey]);
+        log_i("Entrance %s ended with iid %d", entrance, iid);
         runningEntrances--;
         log_i("There is currently %d entrances running.", runningEntrances);
         return retval;
     }
     else
     {
-        log_e("Entrance not found: %s", entrance.c_str());
+        log_e("Entrance not found: %s", entrance);
         return -1;
     }
 }
 
-void BlocklyInterpreter::registerHandler(String type, iBlocklyNodeHandler handler)
+void BlocklyInterpreter::registerHandler(const char *type, iBlocklyNodeHandler handler)
 {
-    _handlers.emplace(type, handler);
+    uint32_t typehash = strHash(type);
+    log_i("Register handler for %s(%d)", type, typehash);
+    _handlers.emplace(typehash, handler);
 }
 
 void BlocklyInterpreter::clearHandlers()
 {
+    log_i("Clear all handlers");
     _handlers.clear();
 }
 
@@ -170,9 +221,19 @@ void BlocklyInterpreter::killAll()
     _flag_stop = false;
 }
 
-inline bool BlocklyInterpreter::error(String blockid, String msg)
+inline bool BlocklyInterpreter::error(const char *blockid, const char *msg)
 {
     log_e("Block interpreter failed at block %s:", blockid);
     log_e("%s", msg);
     return false;
+}
+
+uint32_t BlocklyInterpreter::strHash(const char *str)
+{
+    uint32_t hash = 0;
+    for (; *str != '\0'; str++)
+    {
+        hash = hash * 31 + *str; // 使用31乘以之前的哈希值并添加当前字符的ASCII值
+    }
+    return hash;
 }

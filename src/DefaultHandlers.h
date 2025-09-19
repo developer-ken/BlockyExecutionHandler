@@ -5,4 +5,6 @@
 
 void RegisterDefaultHandlers(BlocklyInterpreter*);
 
+int _E_COMMON_NOP(JsonObject jb, BlocklyInterpreter *b);
+
 #endif
