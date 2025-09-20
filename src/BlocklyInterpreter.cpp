@@ -110,8 +110,7 @@ int BlocklyInterpreter::exec(JsonObject json)
     return 1;
 }
 
-/// 传入一个Block，执行它并获得它处理函数的返回值。
-/// 注意：此函数不会执行连接在传入Block下方的其它Block。
+/// 计算单个block及其依赖的block的值
 int BlocklyInterpreter::eval(JsonObject json)
 {
     if (_flag_stop)
@@ -133,7 +132,11 @@ int BlocklyInterpreter::eval(JsonObject json)
         uint32_t typehash = strHash(json["type"]);
         log_i("eval_%s_%d(%s)", json["type"].as<const char *>(), typehash, json["id"].as<const char *>());
         if (_handlers.find(typehash) != _handlers.end())
-            return _handlers[typehash](json, this);
+        {
+            int val = _handlers[typehash](json, this);
+            log_i("result: %d", val);
+            return val;
+        }
         else
         {
             error(json["id"], "Eval hit an undefined block.");
