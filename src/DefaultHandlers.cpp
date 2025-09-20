@@ -223,6 +223,25 @@ int _A_BREAK_CONTINUE(JsonObject jb, BlocklyInterpreter *b)
     return false;
 }
 
+/*
+ * logic_negate
+ * 逻辑取反
+ * 
+ * 因技术实现限制，没有传入值时，此块为true
+ */
+int _V_NEGATE(JsonObject jb, BlocklyInterpreter *b)
+{
+    return !b->eval(jb["inputs"]["BOOL"]);
+}
+
+/*
+ * logic_boolean
+ * 布尔值常量
+ */
+int _V_BOOLEAN(JsonObject jb, BlocklyInterpreter *b){
+    return strcmp(jb["fields"]["BOOL"].as<const char *>(), "TRUE") == 0;
+}
+
 int _E_COMMON_NOP(JsonObject jb, BlocklyInterpreter *b)
 {
     return true;
