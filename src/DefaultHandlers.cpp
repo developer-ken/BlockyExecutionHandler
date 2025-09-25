@@ -146,7 +146,7 @@ int _A_WHILELOOP(JsonObject jb, BlocklyInterpreter *b)
         if (b->error(jb["id"], "No input found."))
             return false;
     }
-    if (!jb["inputs"].containsKey("MODE"))
+    if (!jb["fields"].containsKey("MODE"))
     {
         if (b->error(jb["id"], "Input field MODE not found."))
             return false;
@@ -256,4 +256,6 @@ void RegisterDefaultHandlers(BlocklyInterpreter *bi)
     bi->registerHandler("controls_whileUntil", _A_WHILELOOP);
     bi->registerHandler("controls_repeat_ext", _A_COUNTED_LOOP);
     bi->registerHandler("controls_flow_statements", _A_BREAK_CONTINUE);
+    bi->registerHandler("logic_negate", _V_NEGATE);
+    bi->registerHandler("logic_boolean", _V_BOOLEAN);
 }

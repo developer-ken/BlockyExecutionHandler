@@ -84,7 +84,7 @@ int BlocklyInterpreter::exec(JsonObject json)
             {
                 break;
             }
-            taskYIELD();
+            delay(1);
         } while (true);
 
         log_i("Block sequence end");
